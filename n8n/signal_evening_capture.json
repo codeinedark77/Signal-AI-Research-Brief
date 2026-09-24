@@ -1,0 +1,75 @@
+{
+  "name": "Signal - Evening Capture",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "b2c3d4e5-0001-4000-8000-000000000001",
+      "name": "On Telegram Message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [-720, 0],
+      "notes": "REQUIRES SETUP: attach the same Telegram API credential used in the 'Signal - Daily Brief' workflow. This is a separate trigger-based workflow because it's event-driven (fires on incoming messages), not scheduled -- keep it active independently of the daily brief workflow."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Telegram's Bot API sends { message: { text, chat: { id }, voice?: {...}, ... } }.\n// Voice messages have no `.text` field -- pass null through rather than\n// guessing at transcription here (see README: transcription isn't wired\n// up in this build). /arc-status/extract already handles null/empty text\n// gracefully, so this stays a plain reshape with no branching logic.\nconst msg = $input.first().json.message;\nreturn [{\n  json: {\n    text: msg.text || null,\n    chat_id: msg.chat.id\n  }\n}];"
+      },
+      "id": "b2c3d4e5-0002-4000-8000-000000000002",
+      "name": "Extract Text And Chat Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SIGNAL_API_BASE_URL }}/arc-status/extract",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b2c3d4e5-0003-4000-8000-000000000003",
+      "name": "Extract Arc Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-240, 0],
+      "notes": "Same SIGNAL_API_BASE_URL env var as the daily brief workflow. Covered by tests/test_api.py::TestArcStatusExtract (6 tests: real extraction, unrelated text, empty/null/whitespace text, default vs. stored known-projects, update-not-duplicate on a second mention)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Extract Text And Chat Id').item.json.chat_id }}",
+        "text": "={{ $json.confirmation_text }}",
+        "additionalFields": {}
+      },
+      "id": "b2c3d4e5-0004-4000-8000-000000000004",
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "chatId is pulled from the ORIGINAL trigger message (via the $('Node Name') expression), not from the HTTP response, since the response body doesn't carry it. Standard n8n cross-node expression syntax -- verify it resolves correctly in your editor, same caveat as the other hand-authored nodes (see README)."
+    }
+  ],
+  "connections": {
+    "On Telegram Message": {
+      "main": [[{ "node": "Extract Text And Chat Id", "type": "main", "index": 0 }]]
+    },
+    "Extract Text And Chat Id": {
+      "main": [[{ "node": "Extract Arc Status", "type": "main", "index": 0 }]]
+    },
+    "Extract Arc Status": {
+      "main": [[{ "node": "Send Confirmation", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "notes": "Hand-authored, structurally validated by scripts/validate_n8n_workflow.py -- same NOT-live-imported caveat as signal_workflow.json (see README, this sandbox couldn't install n8n). Deliberately linear (no IF/Switch node) rather than branching on message type inside n8n, specifically so there's no additional untestable node schema to guess at beyond telegramTrigger/telegram, which the daily-brief workflow already required verifying."
+  }
+}

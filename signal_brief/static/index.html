@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal — AI Research & Arc Intelligence</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-glow-container">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-brand">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">
+                    <span class="brand-name">SIGNAL</span>
+                    <span class="brand-tag">FOD MAX ENGINE</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="overview">
+                    <span class="icon">📊</span> Overview & Brief
+                </button>
+                <button class="nav-item" data-tab="candidates">
+                    <span class="icon">🔬</span> Research & Candidates
+                </button>
+                <button class="nav-item" data-tab="arc">
+                    <span class="icon">🎯</span> Project Arcs
+                </button>
+                <button class="nav-item" data-tab="history">
+                    <span class="icon">📜</span> Brief History
+                </button>
+                <button class="nav-item" data-tab="settings">
+                    <span class="icon">⚙️</span> Taxonomy & Config
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span class="status-text">System Active</span>
+                </div>
+                <div class="time-display" id="clock-display">00:00:00</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-titles">
+                    <h1 id="page-title">Executive Overview</h1>
+                    <p class="subtitle" id="page-subtitle">Daily intelligence brief & active research status arc</p>
+                </div>
+                <div class="header-actions">
+                    <button id="mic-btn" class="btn secondary mic-btn">
+                        <span class="mic-icon">🎤</span>
+                        <span class="btn-label">Voice Update</span>
+                    </button>
+                    <button id="trigger-btn" class="btn primary glowing-btn">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-label">Run Signal Brief</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Audio Recording Overlay Bar (Visible during recording) -->
+            <div id="recording-bar" class="recording-bar hidden">
+                <div class="recording-indicator">
+                    <span class="rec-pulse"></span>
+                    <span>RECORDING VOICE UPDATE...</span>
+                    <span id="recording-timer">00:00</span>
+                </div>
+                <canvas id="audio-waveform" width="300" height="30"></canvas>
+                <button id="stop-rec-btn" class="btn danger sm">⏹ Stop & Extract</button>
+            </div>
+
+            <!-- TAB 1: OVERVIEW -->
+            <section id="tab-overview" class="tab-pane active">
+                <div class="metrics-row">
+                    <div class="metric-card glass">
+                        <div class="metric-icon">📅</div>
+                        <div class="metric-info">
+                            <span class="metric-label">Calendar Events</span>
+                            <span class="metric-value" id="metric-events-count">0</span>
+                        </div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-icon">📑</div>
+                        <div class="metric-info">
+                            <span class="metric-label">Top Candidates</span>
+                            <span class="metric-value" id="metric-candidates-count">0</span>
+                        </div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-icon">🚀</div>
+                        <div class="metric-info">
+                            <span class="metric-label">Tracked Projects</span>
+                            <span class="metric-value" id="metric-projects-count">0</span>
+                        </div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-icon">🕒</div>
+                        <div class="metric-info">
+                            <span class="metric-label">Last Generated</span>
+                            <span class="metric-value sm" id="metric-last-time">Never</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Brief Digest View -->
+                    <div class="card glass brief-main-card">
+                        <div class="card-header">
+                            <h2>Today's Compiled Brief</h2>
+                            <button id="copy-brief-btn" class="btn text-btn">📋 Copy Text</button>
+                        </div>
+                        <div class="brief-text-container">
+                            <div id="latest-brief-formatted" class="brief-formatted">
+                                <div class="empty-state">
+                                    <div class="spinner"></div>
+                                    <p>Loading latest signal brief...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Arc Status Widget -->
+                    <div class="card glass arc-summary-card">
+                        <div class="card-header">
+                            <h2>Active Project Arcs</h2>
+                            <button class="btn text-btn switch-tab" data-target="arc">View All →</button>
+                        </div>
+                        <div id="arc-summary-list" class="arc-summary-list">
+                            <!-- Cards inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: CANDIDATES -->
+            <section id="tab-candidates" class="tab-pane">
+                <div class="candidates-toolbar">
+                    <div class="search-box">
+                        <input type="text" id="candidate-search" placeholder="Search papers, repos, topics...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Source Filter:</label>
+                        <select id="source-filter">
+                            <option value="all">All Sources</option>
+                            <option value="arxiv">arXiv</option>
+                            <option value="github">GitHub</option>
+                            <option value="huggingface">Hugging Face</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Score:</label>
+                        <input type="range" id="score-filter" min="0" max="10" step="0.5" value="0">
+                        <span id="score-filter-val">0.0</span>
+                    </div>
+                </div>
+
+                <div id="candidates-grid" class="candidates-grid">
+                    <!-- Candidate Cards inserted dynamically -->
+                </div>
+            </section>
+
+            <!-- TAB 3: PROJECT ARCS -->
+            <section id="tab-arc" class="tab-pane">
+                <div class="arc-toolbar">
+                    <h2>Portfolio Arc State Tracker</h2>
+                    <button id="add-project-btn" class="btn primary sm">+ Quick Add Update</button>
+                </div>
+
+                <!-- Add Project Form Modal -->
+                <div id="add-project-modal" class="modal hidden">
+                    <div class="modal-content glass">
+                        <div class="modal-header">
+                            <h3>Update Project Status</h3>
+                            <button id="close-modal-btn" class="modal-close">&times;</button>
+                        </div>
+                        <form id="project-form">
+                            <div class="form-group">
+                                <label>Project Name</label>
+                                <input type="text" id="form-project-name" placeholder="e.g. Assay" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Current Status</label>
+                                <input type="text" id="form-project-status" placeholder="e.g. Fine-tuning Qwen2.5 on GPU" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Next Action</label>
+                                <input type="text" id="form-project-next" placeholder="e.g. Evaluate benchmark accuracy" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn primary">Save Status</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="arc-full-grid" class="arc-full-grid">
+                    <!-- Full Arc Cards -->
+                </div>
+            </section>
+
+            <!-- TAB 4: BRIEF HISTORY -->
+            <section id="tab-history" class="tab-pane">
+                <div class="history-container">
+                    <div class="history-sidebar card glass">
+                        <h3>Past Runs</h3>
+                        <div id="history-list" class="history-list">
+                            <!-- History items -->
+                        </div>
+                    </div>
+                    <div class="history-detail card glass">
+                        <h3>Selected Brief View</h3>
+                        <div id="history-detail-content" class="brief-formatted">
+                            <p class="text-muted">Select a past brief run from the left panel to inspect.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: TAXONOMY & CONFIG -->
+            <section id="tab-settings" class="tab-pane">
+                <div class="card glass settings-card">
+                    <h2>Relevance Taxonomy Keywords</h2>
+                    <p class="subtitle">These keywords guide the LLM candidate scoring & ranking model</p>
+
+                    <div class="taxonomy-input-group">
+                        <input type="text" id="new-tag-input" placeholder="Enter new taxonomy keyword (e.g. Direct Preference Optimization)">
+                        <button id="add-tag-btn" class="btn secondary">Add Tag</button>
+                    </div>
+
+                    <div id="taxonomy-chips" class="taxonomy-chips">
+                        <!-- Chips inserted dynamically -->
+                    </div>
+
+                    <div class="settings-actions">
+                        <button id="save-taxonomy-btn" class="btn primary">Save Taxonomy Settings</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

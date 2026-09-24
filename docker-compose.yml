@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  signal-api:
+    build: .
+    container_name: signal-api
+    restart: unless-stopped
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - SIGNAL_USE_FAKE_LLM=${SIGNAL_USE_FAKE_LLM:-0}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - signal-data:/data
+    # Not exposed to the host on purpose -- only n8n needs to reach it,
+    # over the shared docker network below, at http://signal-api:8000.
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - SIGNAL_API_BASE_URL=http://signal-api:8000
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - GENERIC_TIMEZONE=${TZ:-Asia/Kolkata}
+    volumes:
+      - n8n-data:/home/node/.n8n
+    depends_on:
+      - signal-api
+
+volumes:
+  signal-data:
+  n8n-data:

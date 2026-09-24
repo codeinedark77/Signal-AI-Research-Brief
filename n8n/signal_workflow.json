@@ -1,0 +1,121 @@
+{
+  "name": "Signal - Daily Brief",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Daily 7AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-960, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "timeMin": "={{ $now.startOf('day').toISO() }}",
+        "timeMax": "={{ $now.endOf('day').toISO() }}",
+        "options": {
+          "singleEvents": true,
+          "orderBy": "startTime"
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Get Today's Calendar Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-720, 0],
+      "notes": "REQUIRES SETUP: attach a Google Calendar OAuth2 credential in the n8n editor (Credentials > New > Google Calendar OAuth2 API). Verify 'operation'/'calendar' field names against your installed n8n version's node UI -- this JSON was hand-authored and not live-imported (see README, 'What's verified vs. not')."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reshape Google Calendar node output into the { title, start, end?, location? }\n// shape the /brief/auto endpoint expects (see signal_brief/models.py:CalendarEvent).\nreturn items.map(item => {\n  const ev = item.json;\n  return {\n    json: {\n      title: ev.summary || '(untitled event)',\n      start: ev.start?.dateTime || ev.start?.date,\n      end: ev.end?.dateTime || ev.end?.date || null,\n      location: ev.location || null\n    }\n  };\n});"
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Reshape Calendar Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collapse the per-event items from the previous node into a single\n// item carrying a calendar_events ARRAY, so the next node can build one\n// JSON body for the HTTP request instead of firing once per event.\nconst events = items.map(item => item.json);\nreturn [{ json: { calendar_events: events } }];"
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Collect Into Array",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SIGNAL_API_BASE_URL }}/brief/auto",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ calendar_events: $json.calendar_events, top_k: 5 }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Call Signal Brief Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0],
+      "notes": "SIGNAL_API_BASE_URL must be set as an n8n environment variable, e.g. http://signal-api:8000 (docker-compose) or http://your-vps-ip:8000. This is the one call that runs the whole dedupe -> score -> rank -> summarize -> compose graph -- see signal_brief/api.py, covered by tests/test_api.py."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.brief_text }}",
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [240, 0],
+      "notes": "REQUIRES SETUP: attach a Telegram API credential (bot token from @BotFather) and set TELEGRAM_CHAT_ID as an n8n environment variable (message @userinfobot to get your own chat id)."
+    }
+  ],
+  "connections": {
+    "Daily 7AM Trigger": {
+      "main": [[{ "node": "Get Today's Calendar Events", "type": "main", "index": 0 }]]
+    },
+    "Get Today's Calendar Events": {
+      "main": [[{ "node": "Reshape Calendar Events", "type": "main", "index": 0 }]]
+    },
+    "Reshape Calendar Events": {
+      "main": [[{ "node": "Collect Into Array", "type": "main", "index": 0 }]]
+    },
+    "Collect Into Array": {
+      "main": [[{ "node": "Call Signal Brief Service", "type": "main", "index": 0 }]]
+    },
+    "Call Signal Brief Service": {
+      "main": [[{ "node": "Send to Telegram", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "notes": "Hand-authored, structurally validated by scripts/validate_n8n_workflow.py (checks JSON shape, connection integrity, duplicate names/ids -- see README). NOT live-imported into a running n8n instance: this sandbox could not install n8n (a transitive dependency of @n8n/n8n-nodes-langchain fetches from cdn.sheetjs.com, which is outside this environment's network allowlist). Import this into your own n8n and treat the googleCalendar/telegram node parameter names as needing a quick visual check against the editor -- everything upstream of those two (the FastAPI call and everything in signal_brief/) is covered by the real, passing test suite."
+  }
+}
