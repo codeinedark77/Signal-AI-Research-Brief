@@ -21,8 +21,10 @@ services:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: n8n
     restart: unless-stopped
+    # Keep the HTTP development deployment local. Exposing n8n on all host
+    # interfaces while disabling secure cookies allows remote session theft.
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
       - N8N_SECURE_COOKIE=false
       - SIGNAL_API_BASE_URL=http://signal-api:8000
